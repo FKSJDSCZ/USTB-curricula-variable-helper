@@ -1,34 +1,27 @@
 import os
 
-from PyQt6.QtWidgets import *
-from PyQt6.QtCore import QModelIndex
-from PyQt6.QtCore import Qt
+from PySide6.QtWidgets import *
+from PySide6.QtCore import QModelIndex
+from PySide6.QtCore import Qt
 
 from view.MainWindowView import MainWindowView
 from service.MainWindowService import MainWindowService
 from model.MainWindowModel import MainWindowModel
-from signals.signal import ToMainWindow
 
 
 class MainWindowController:
-	def __init__(self, mainWindowView: MainWindowView, mainWindowService: MainWindowService,
-	             mainWindowModel: MainWindowModel, toMainWindow: ToMainWindow):
+	def __init__(self, mainWindowView: MainWindowView, mainWindowService: MainWindowService, mainWindowModel: MainWindowModel):
 		self.view_: MainWindowView = mainWindowView
 		self.service_: MainWindowService = mainWindowService
 		self.model_: MainWindowModel = mainWindowModel
-
-		self.toMainWindow_: ToMainWindow = toMainWindow
 
 		self._tableInit()
 		self._connectionInit()
 
 	def _tableInit(self) -> None:
-		self.view_.courseTableView_.horizontalHeader().setSectionResizeMode(
-			QHeaderView.ResizeMode.ResizeToContents)
-		self.view_.classTableView_.horizontalHeader().setSectionResizeMode(
-			QHeaderView.ResizeMode.ResizeToContents)
-		self.view_.autoCourseTableView_.horizontalHeader().setSectionResizeMode(
-			QHeaderView.ResizeMode.ResizeToContents)
+		self.view_.courseTableView_.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+		self.view_.classTableView_.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+		self.view_.autoCourseTableView_.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
 		self.model_.courseTableProxyModel_.setSourceModel(self.model_.courseTableModel_)
 		self.model_.courseTableProxyModel_.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
@@ -72,9 +65,8 @@ class MainWindowController:
 		self.service_.dataUpdate_.updateChooseClass_.connect(self.service_.updateChooseClassRes)
 		self.service_.timer_.timeout.connect(self.service_.autoChooseClass)
 
-	def _viewInit(self, userAccount: str) -> None:
-		self.model_.userAccount_ = userAccount
-		self.service_.syncCookies()
+	def viewInit(self, userName: str) -> None:
+		self.model_.userName_ = userName
 		self.service_.getEpochList()
 
 		self.view_.show()

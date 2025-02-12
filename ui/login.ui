@@ -62,20 +62,20 @@
     <bool>true</bool>
    </property>
   </widget>
-  <widget class="QLineEdit" name="userAccountEdit">
+  <widget class="QLineEdit" name="phoneNumberEdit">
    <property name="geometry">
     <rect>
      <x>40</x>
      <y>120</y>
-     <width>211</width>
+     <width>251</width>
      <height>31</height>
     </rect>
    </property>
    <property name="text">
-    <string>U202241173</string>
+    <string>18955566361</string>
    </property>
    <property name="placeholderText">
-    <string>请输入学号</string>
+    <string>请输入手机号</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_3">
@@ -99,23 +99,17 @@
     <string>欢迎登录北京科技大学教务平台</string>
    </property>
   </widget>
-  <widget class="QLineEdit" name="userPasswordEdit">
+  <widget class="QLineEdit" name="smsCodeEdit">
    <property name="geometry">
     <rect>
      <x>40</x>
      <y>180</y>
-     <width>211</width>
+     <width>141</width>
      <height>31</height>
     </rect>
    </property>
-   <property name="text">
-    <string>2004Xywh.</string>
-   </property>
-   <property name="echoMode">
-    <enum>QLineEdit::Password</enum>
-   </property>
    <property name="placeholderText">
-    <string>请输入密码</string>
+    <string>请输入验证码</string>
    </property>
   </widget>
   <widget class="QPushButton" name="loginBtn">
@@ -163,9 +157,9 @@
   <widget class="QLabel" name="warningLabel">
    <property name="geometry">
     <rect>
-     <x>60</x>
+     <x>40</x>
      <y>230</y>
-     <width>161</width>
+     <width>251</width>
      <height>21</height>
     </rect>
    </property>
@@ -173,7 +167,26 @@
     <string notr="true">QLabel { color : red; }</string>
    </property>
    <property name="alignment">
-    <set>Qt::AlignCenter</set>
+    <set>Qt::AlignmentFlag::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="getmsgBtn">
+   <property name="geometry">
+    <rect>
+     <x>190</x>
+     <y>180</y>
+     <width>101</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>获取验证码</string>
+   </property>
+   <property name="autoDefault">
+    <bool>false</bool>
+   </property>
+   <property name="flat">
+    <bool>false</bool>
    </property>
   </widget>
  </widget>

@@ -2,11 +2,10 @@ import json
 import re
 
 from lxml import etree
-from urllib import parse
-from requests import Session
-from PyQt6.QtCore import QUrl, QUrlQuery, QByteArray, QTimer
-from PyQt6.QtNetwork import *
-from PyQt6.QtGui import QStandardItem
+from urllib.parse import urlencode, urlparse, parse_qs
+from PySide6.QtCore import QUrl, QUrlQuery, QByteArray, QTimer
+from PySide6.QtNetwork import *
+from PySide6.QtGui import QStandardItem
 
 from model.MainWindowModel import MainWindowModel
 from signals.signal import DataUpdateSignals
@@ -16,28 +15,27 @@ rootDomain = "https://jwgl.ustb.edu.cn"
 
 
 class MainWindowService:
-	def __init__(self, session: Session, mainWindowModel: MainWindowModel):
+	def __init__(self, mainWindowModel: MainWindowModel):
 		super().__init__()
-		self.session_: Session = session
 		self.model_: MainWindowModel = mainWindowModel
 		self.manager_: QNetworkAccessManager = QNetworkAccessManager()
 		self.dataUpdate_: DataUpdateSignals = DataUpdateSignals()
 		self.timer_: QTimer = QTimer()
 
-	def get(self, url: str, callBack, params: dict[str:str] = None, save: bool = False, *other) -> None:
+	def get(self, url: str, callBack, params: dict[str, str] = None, save: bool = False, *other) -> None:
 		paramStr = str()
 		if params:
-			paramStr = "?" + parse.urlencode(params)
+			paramStr = "?" + urlencode(params)
 		qurl = QUrl(url + paramStr)
 		reply = self.manager_.get(QNetworkRequest(qurl))
 		reply.finished.connect(lambda: callBack(reply, *other))
 		if save:
 			self.model_.autoReplyList_.append(reply)
 
-	def post(self, url: str, callBack, params: dict[str:str] = None, data: dict[str, str] = None):
+	def post(self, url: str, callBack, params: dict[str, str] = None, data: dict[str, str] = None):
 		paramStr = str()
 		if params:
-			paramStr = "?" + parse.urlencode(params)
+			paramStr = "?" + urlencode(params)
 		request = QNetworkRequest(QUrl(url + paramStr))
 		request.setHeader(QNetworkRequest.KnownHeaders.ContentTypeHeader, "application/json")
 
@@ -49,17 +47,6 @@ class MainWindowService:
 
 		reply = self.manager_.post(request, data_)
 		reply.finished.connect(lambda: callBack(reply))
-
-	def syncCookies(self) -> None:
-		cookieJar = QNetworkCookieJar()
-		for domain, cookies in self.session_.cookies._cookies.items():
-			for path, cookieDict in cookies.items():
-				for name, cookie in cookieDict.items():
-					qtCookie = QNetworkCookie(name.encode(), cookie.value.encode())
-					qtCookie.setDomain(domain)
-					qtCookie.setPath(path)
-					cookieJar.insertCookie(qtCookie)
-		self.manager_.setCookieJar(cookieJar)
 
 	def getEpochList(self) -> None:
 		# get epoch selection page
@@ -100,7 +87,7 @@ class MainWindowService:
 		# course select
 		if self.model_.currentTypeIndex_ != count - 1:
 			urlToParse = self.model_.typeUrlList_[self.model_.currentTypeIndex_]
-			typeParams = parse.parse_qs(parse.urlparse(urlToParse).query)
+			typeParams = parse_qs(urlparse(urlToParse).query)
 			self.model_.type_ = typeParams["type"][0]
 			self.model_.opener_ = typeParams["opener"][0]
 		# class table log query
@@ -131,6 +118,8 @@ class MainWindowService:
 			tableData = self.model_.courseTableRows_[row].xpath(".//td")[1:]
 			for col in range(len(tableData)):
 				self.model_.courseTableModel_.setItem(row - 1, col, QStandardItem(tableData[col].text))
+
+		getCourseReply.deleteLater()
 
 	def getClassData(self) -> None:
 		# get class data
@@ -171,6 +160,8 @@ class MainWindowService:
 					self.model_.classTableModel_.setItem(row - 1, col, QStandardItem(text))
 				else:
 					self.model_.classTableModel_.setItem(row - 1, col, QStandardItem(str()))
+
+		getClassReply.deleteLater()
 
 	def _selectCompulsoryCourse(self, url: str, index: int) -> None:
 		"""compulsory(major) course, optional course or minor course"""
@@ -260,7 +251,7 @@ class MainWindowService:
 		url = rootDomain + "/xsxk/xsxkoper"
 		self.get(url, self._handleChooseClassReply, params, True, times, params)
 
-	def _handleChooseClassReply(self, chooseClassReply: QNetworkReply, times: int, params: dict[str:str]) -> None:
+	def _handleChooseClassReply(self, chooseClassReply: QNetworkReply, times: int, params: dict[str, str]) -> None:
 		resData = json.loads(chooseClassReply.readAll().data().decode())
 		if times == 1:
 			if resData["success"]:
@@ -348,7 +339,7 @@ class MainWindowService:
 		exitUrl = rootDomain + "/glht/Logon.do?method=logoutFromJsxsd"
 		exitData = {
 			"view": "",
-			"useraccount": self.model_.userAccount_,
+			"useraccount": self.model_.userName_,
 			"ticket": ""
 		}
 		self.session_.post(url=exitUrl, data=exitData)

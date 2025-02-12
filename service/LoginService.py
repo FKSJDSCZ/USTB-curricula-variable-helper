@@ -1,108 +1,289 @@
-import sys
-import time
-import requests
-import urllib3
 import json
 
 from lxml import etree
-from urllib import parse
-from io import BytesIO
-from requests import Session
-from PyQt6.QtNetwork import *
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtCore import QUrl
+from urllib.parse import urlparse, parse_qs
+from PySide6.QtCore import Signal, QObject
+from PySide6.QtGui import QPixmap
+from PySide6.QtNetwork import QNetworkRequest, QNetworkReply
 
-from model.LoginModel import LoginModel
-from signals.signal import QrLogin
-from utils.Functions import *
+from entity.NetworkAccessManager import NetworkAccessManager
 
 rootDomain = "https://jwgl.ustb.edu.cn"
-authDomain = "https://sis.ustb.edu.cn"
+ssoAuthDomain = "https://sso.ustb.edu.cn"
+sisAuthDomain = "https://sis.ustb.edu.cn"
 
 
-class LoginService:
-	def __init__(self, session: Session, loginModel: LoginModel):
-		self.session_: Session = session
-		self.model_: LoginModel = loginModel
+class LoginService(QObject):
+	initFinished = Signal()
+	qrCodeUpdated = Signal()
+	imageDataUpdated = Signal()
+	captchaChecked = Signal(bool)
+	btnCooldown = Signal(int)
+	loginSignal = Signal(bool, str)
 
-		self.qrLogin_: QrLogin = QrLogin()
+	def __init__(self, manager: NetworkAccessManager):
+		super().__init__()
+		self.userName_: str = str()
+		self.phoneNumber_: str = str()
+		self.smsCode_: str = str()
+		self.lck_: str = str()
+		self.entityId_: str = str()
+		self.qrToken_: str = str()
+		self.appId_: str = str()
+		self.sessionId_: str = str()
+		self.smsToken_: str = str()
+		self.baseImgData_: str = str()
+		self.jigsawImgData_: str = str()
+		self.authChainCodes_: dict = dict()
+		self.qrCodePixmap_: QPixmap = QPixmap()
+		self.lastQrStateQuery_: QNetworkReply = None
+		self.manager_: NetworkAccessManager = manager
 
-		self.qrManager_: QNetworkAccessManager = QNetworkAccessManager(None)
+	def handleInit(self):
+		"""step 0: get lck & entityId"""
+		self.manager_.get(
+			f"{ssoAuthDomain}/idp/authCenter/authenticate",
+			self._setLck,
+			{
+				"response_type": "code",
+				"client_id": "NS2022062",
+				"state": "test",
+				"redirect_uri": "https://jwgl.ustb.edu.cn/glht/Logon.do?method=weCharLogin",
+			},
+			False,
+		)
 
-	def passwordLoginAuth(self) -> tuple[bool, str]:
-		if not self.model_.userAccount_:
-			return False, "用户名为空"
-		if not self.model_.userPassword_:
-			return False, "密码为空"
-		if self._sendLoginRequest():
-			return True, "登录成功"
-		else:
-			return False, "用户名或密码错误"
+	def _setLck(self, reply: QNetworkReply):
+		"""step 1: set lck & entityId & query authenticate methods"""
+		redirectUrl = reply.header(QNetworkRequest.KnownHeaders.LocationHeader).toString()
+		redirectParams = parse_qs(urlparse(redirectUrl).fragment.split("?")[1])
 
-	def _sendLoginRequest(self) -> bool:
-		encodedAc = encrypt(self.model_.userAccount_)
-		encodedPwd = encrypt(self.model_.userPassword_)
+		self.lck_ = redirectParams["lck"][0]
+		self.entityId_ = redirectParams["entityId"][0]
+		self.initFinished.emit()
 
-		loginUrl = rootDomain + "/xk/LoginToXk"
-		loginData = {"userAccount": self.model_.userAccount_,
-		             "userPassword": "",
-		             "encoded": f"{encodedAc}%%%{encodedPwd}"}
-		loginReq = self.session_.post(url=loginUrl, data=loginData)
-		loginHtml = etree.HTML(loginReq.text, etree.HTMLParser())
-		errorInfo = loginHtml.xpath("//span[@class='input_li']")
-		return len(errorInfo) == 0
-
-	def qrCodeLoginAuth(self, response: QNetworkReply) -> None:
-		resBytes = response.readAll()
-		resDict = json.loads(str(resBytes.data(), 'utf-8'))
-		if resDict["state"] == 101:
-			self.qrLogin_.qrLoginSignal_.emit(False, str())
-			self._sendCheckStateRequest()
-		elif resDict["state"] == 102:
-			self.qrLogin_.qrLoginSignal_.emit(False, "已扫码，请确认")
-			self._sendCheckStateRequest()
-		elif resDict["state"] == 103:
-			self.qrLogin_.qrLoginSignal_.emit(False, "session id已失效，请刷新")
-		elif resDict["state"] == 104:
-			self.qrLogin_.qrLoginSignal_.emit(False, "二维码已失效，请刷新")
-		else:
-			loginUrl = rootDomain + "/glht/Logon.do"
-			loginParams = {
-				"method": "weCharLogin",
-				"appid": self.model_.appId_,
-				"auth_code": resDict["data"],
-				"rand_token": self.model_.token_
+		self.manager_.post(
+			f"{ssoAuthDomain}/idp/authn/queryAuthMethods",
+			self._setAuthMethods,
+			None,
+			{
+				"lck": self.lck_,
+				"entityId": self.entityId_,
 			}
-			self.session_.get(url=loginUrl, params=loginParams)
-			self.qrLogin_.qrLoginSignal_.emit(True, "登录中...")
+		)
+		reply.deleteLater()
 
-	def getQrCode(self) -> None:
-		self.session_.get(url=rootDomain)
+	def _setAuthMethods(self, reply: QNetworkReply):
+		"""step 2: set authenticate chain codes and module code"""
+		resData = json.loads(reply.readAll().data().decode())
+		if resData["code"] == 200:
+			for dataDict in resData["data"]:
+				self.authChainCodes_[dataDict["moduleCode"]] = dataDict["authChainCode"]
+		else:
+			self.loginSignal.emit(False, resData["message"])
 
-		tokenUrl = rootDomain + "/glht/Logon.do?method=randToken"
-		tokenReq = self.session_.post(url=tokenUrl)
-		tokenDict = tokenReq.json()
-		self.model_.token_ = tokenDict["rand_token"]
-		self.model_.appId_ = tokenDict["appid"]
+		reply.deleteLater()
 
-		qrCodeUrl = authDomain + "/connect/qrpage"
-		qrCodeParams = {
-			"appid": self.model_.appId_,
-			"return_url": "https://jwgl.ustb.edu.cn/glht/Logon.do?method=weCharLogin",
-			"rand_token": self.model_.token_,
-			"embed_flag": "1"
-		}
-		qrCodeReq = self.session_.get(url=qrCodeUrl, params=qrCodeParams)
-		qrCodeHtml = etree.HTML(qrCodeReq.text, etree.HTMLParser())
-		qrCodeLink = authDomain + qrCodeHtml.xpath("//img/@src")[0]
-		self.model_.sid_ = parse.parse_qs(parse.urlparse(qrCodeLink).query)["sid"][0]
+	def handleQrCodeLogin(self) -> None:
+		"""step 0: get appId & randomToken"""
+		if self.lastQrStateQuery_:
+			self.lastQrStateQuery_.finished.disconnect()
+			self.lastQrStateQuery_.abort()
+			self.lastQrStateQuery_.deleteLater()
+			self.lastQrStateQuery_ = None
+		self.manager_.post(
+			f"{ssoAuthDomain}/idp/authn/getMicroQr",
+			self._getQrCodeLink,
+			None,
+			{
+				"lck": self.lck_,
+				"entityId": self.entityId_,
+			},
+		)
 
-		qrCodeData = requests.get(url=qrCodeLink).content
-		self.model_.qrCodePixmap_.loadFromData(BytesIO(qrCodeData).read())
+	def _getQrCodeLink(self, reply: QNetworkReply) -> None:
+		"""step 1: get Qr code link"""
+		resData = json.loads(reply.readAll().data().decode())
+		self.appId_ = resData["data"]["appId"]
+		returnUrl = resData["data"]["returnUrl"]
+		getQrCodeUrl = resData["data"]["url"]
+		self.qrToken_ = resData["data"]["randomToken"]
+
+		self.manager_.get(
+			getQrCodeUrl,
+			self._getQrCodeData,
+			{
+				"appid": self.appId_,
+				"return_url": returnUrl,
+				"rand_token": self.qrToken_,
+				"embed_flag": 1
+			},
+		)
+		reply.deleteLater()
+
+	def _getQrCodeData(self, reply: QNetworkReply) -> None:
+		"""step 2: get Qr Code image data"""
+		qrCodeHtml: etree._Element = etree.HTML(reply.readAll().data().decode(), etree.HTMLParser())
+		qrCodeLink = sisAuthDomain + qrCodeHtml.xpath("//img/@src")[0]
+		qrCodeLinkParams = parse_qs(urlparse(qrCodeLink).query)
+		self.sessionId_ = qrCodeLinkParams["sid"][0]
+
+		self.manager_.get(
+			qrCodeLink,
+			self._queryQrState,
+		)
+		reply.deleteLater()
+
+	def _queryQrState(self, reply: QNetworkReply) -> None:
+		"""step 3: load Qr Code data & query Qr code state"""
+		self.qrCodePixmap_.loadFromData(reply.readAll())
+		self.qrCodeUpdated.emit()
 
 		self._sendCheckStateRequest()
+		reply.deleteLater()
 
-	def _sendCheckStateRequest(self) -> None:
-		checkStateUrl = f"{authDomain}/connect/state?sid={self.model_.sid_}"
-		stateReq = QNetworkRequest(QUrl(checkStateUrl))
-		self.qrManager_.get(stateReq)
+	def _sendCheckStateRequest(self):
+		self.lastQrStateQuery_ = self.manager_.get(
+			f"{sisAuthDomain}/connect/state",
+			self._qrAuthenticate,
+			{
+				"sid": self.sessionId_
+			},
+		)
+
+	def _qrAuthenticate(self, reply: QNetworkReply) -> None:
+		"""step 4: check Qr code state & authenticate"""
+		if parse_qs(urlparse(reply.request().url().toString()).query)["sid"][0] == self.sessionId_:
+			resData = json.loads(reply.readAll().data().decode())
+			if resData["state"] == 101:
+				self.loginSignal.emit(False, str())
+				self._sendCheckStateRequest()
+			elif resData["state"] == 102:
+				self.loginSignal.emit(False, "已扫码，请确认")
+				self._sendCheckStateRequest()
+			elif resData["state"] == 103:
+				self.loginSignal.emit(False, "session id已失效，请刷新")
+			elif resData["state"] == 104:
+				self.loginSignal.emit(False, "二维码已失效，请刷新")
+			elif resData["state"] == 200:
+				self.manager_.get(
+					f"{ssoAuthDomain}/idp/authCenter/authenticateByLck",
+					self._sendLoginRequest,
+					{
+						"thirdPartyAuthCode": "microQr",
+						"lck": self.lck_,
+						"appid": self.appId_,
+						"auth_code": resData["data"],
+						"rand_token": self.qrToken_,
+					}
+				)
+				self.loginSignal.emit(False, "登录中...")
+		self.lastQrStateQuery_ = None
+		reply.deleteLater()
+
+	def _sendLoginRequest(self, reply: QNetworkReply) -> None:
+		"""step 5: ready to login"""
+		authHtml: etree._Element = etree.HTML(reply.readAll().data().decode(), etree.HTMLParser())
+		authCode = authHtml.xpath("//input[@id='code']/@value")[0]
+		state = authHtml.xpath("//input[@id='state']/@value")[0]
+
+		self.manager_.get(
+			f"{rootDomain}/glht/Logon.do",
+			self._login,
+			{
+				"method": "weCharLogin",
+				"code": authCode,
+				"state": state,
+			}
+		)
+		reply.deleteLater()
+
+	def _login(self, reply: QNetworkReply) -> None:
+		"""step 6: ready to switch view"""
+		self.loginSignal.emit(True, str())
+		reply.deleteLater()
+
+	def handleSmsLogin(self) -> None:
+		"""step 0: get CAPTCHA block puzzle"""
+		self.manager_.get(
+			f"{ssoAuthDomain}/idp/captcha/getBlockPuzzle",
+			self._setBlockPuzzle
+		)
+
+	def _setBlockPuzzle(self, reply: QNetworkReply) -> None:
+		"""step 1: set block puzzle"""
+		resData = json.loads(reply.readAll().data().decode())
+		if resData["code"] == "200":
+			self.smsToken_ = resData["data"]["token"]
+			self.baseImgData_ = resData["data"]["originalImageBase64"]
+			self.jigsawImgData_ = resData["data"]["jigsawImageBase64"]
+			self.imageDataUpdated.emit()
+		else:
+			self.loginSignal.emit(False, resData["message"])
+		reply.deleteLater()
+
+	def checkPuzzle(self, value: int) -> None:
+		"""step 2: check block puzzle & send message if CAPTCHA passed"""
+		self.manager_.post(
+			f"{ssoAuthDomain}/idp/authn/sendSmsMsg",
+			self._getMsg,
+			None,
+			{
+				"loginName": self.phoneNumber_,
+				"pointJson": json.dumps({"x": value, "y": 5}),
+				"token": self.smsToken_,
+				"lck": self.lck_,
+			}
+		)
+
+	def _getMsg(self, reply: QNetworkReply) -> None:
+		"""step 3: process CAPTCHA result"""
+		resData = json.loads(reply.readAll().data().decode())
+		if resData["code"] == "200":
+			self.captchaChecked.emit(True)
+			self.loginSignal.emit(False, resData["data"]["msg"])
+			self.btnCooldown.emit(int(resData["data"]["coolingTime"]))
+		elif resData["code"] == "5054":
+			self.captchaChecked.emit(False)
+		else:
+			self.captchaChecked.emit(True)
+			self.loginSignal.emit(False, resData["message"])
+		reply.deleteLater()
+
+	def smsAuthenticate(self) -> None:
+		"""step 4: verify SMS code & get login link"""
+		self.manager_.post(
+			f"{ssoAuthDomain}/idp/authn/authExecute",
+			self._getLoginLink,
+			None,
+			{
+				"authModuleCode": "userAndSms",
+				"authChainCode": self.authChainCodes_["userAndSms"],
+				"entityId": self.entityId_,
+				"requestType": "chain_type",
+				"lck": self.lck_,
+				"authPara":
+					{
+						"loginName": self.phoneNumber_,
+						"smsCode": self.smsCode_,
+						"verifyCode": ""
+					}
+			}
+		)
+
+	def _getLoginLink(self, reply: QNetworkReply) -> None:
+		"""step 5: get login link"""
+		resData = json.loads(reply.readAll().data().decode())
+		if resData["code"] == 200:
+			self.userName_ = resData["userName"]
+			self.manager_.post(
+				f"{ssoAuthDomain}/idp/authCenter/authnEngine",
+				self._sendLoginRequest,
+				{"locale": "zh-CN"},
+				{"loginToken": resData["loginToken"]},
+				"application/x-www-form-urlencoded"
+			)
+			self.loginSignal.emit(False, "登录中...")
+		else:
+			self.loginSignal.emit(False, resData["message"])
+		reply.deleteLater()

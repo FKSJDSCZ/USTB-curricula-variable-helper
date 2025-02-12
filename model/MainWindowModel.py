@@ -1,8 +1,8 @@
 import json
 
-from PyQt6.QtGui import QStandardItemModel, QStandardItem
-from PyQt6.QtCore import QModelIndex, QSortFilterProxyModel
-from PyQt6.QtNetwork import QNetworkReply
+from PySide6.QtGui import QStandardItemModel, QStandardItem
+from PySide6.QtCore import QModelIndex, QSortFilterProxyModel
+from PySide6.QtNetwork import QNetworkReply
 from entity.Class import ExtensionClass
 
 
@@ -15,7 +15,7 @@ class MainWindowModel:
 		self.timerInterval_: int = 100
 		self.autoClassIndex_: int = 0
 
-		self.userAccount_: str = str()
+		self.userName_: str = str()
 		self.type_: str = str()
 		self.opener_: str = str()
 		self.courseCode_: str = str()
@@ -57,7 +57,7 @@ class MainWindowModel:
 		if self.loadFileName_:
 			self.courseFile_ = open(self.loadFileName_, "r", encoding="utf-8")
 			accountDict = json.loads(self.courseFile_.read())
-			classDict = accountDict.get(self.userAccount_)
+			classDict = accountDict.get(self.userName_)
 			self.courseFile_.close()
 			if classDict:
 				headers = classDict["headers"]
@@ -95,7 +95,7 @@ class MainWindowModel:
 				data.append(class_.__dict__)
 
 			accountDict = {
-				self.userAccount_: {
+				self.userName_: {
 					"headers": headers,
 					"classes": classes,
 					"data": data

@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import *
-from PyQt6.QtGui import QCloseEvent
-from PyQt6 import uic
+from PySide6.QtWidgets import *
+from PySide6.QtGui import QCloseEvent
+from PySide6 import uic
 
 
 class MainWindowView(QMainWindow):
