@@ -1,4 +1,5 @@
 import json
+from lxml import etree
 
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 from PySide6.QtCore import QModelIndex, QSortFilterProxyModel
@@ -37,10 +38,9 @@ class MainWindowModel:
 		"""课程类型列表"""
 		self.typeUrlList_: list[str] = list()
 		"""各类型课程的查询URL列表"""
-		self.courseTableRows_: list = list()
-		"""type: list[lxml.etree._Element]"""
+		self.courseTableRows_: list[etree._Element] = list()
 		self.autoClassList_: list[ExtensionClass] = list()
-		self.autoReplyList_: list[QNetworkReply] = list()
+		# self.autoReplyList_: list[QNetworkReply] = list()
 
 		self.courseFile_ = None
 

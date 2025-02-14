@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1080</width>
-    <height>976</height>
+    <height>760</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -77,13 +77,13 @@
        <string>课程类型：</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="refresh">
+     <widget class="QPushButton" name="refreshBtn">
       <property name="geometry">
        <rect>
         <x>510</x>
-        <y>20</y>
-        <width>75</width>
-        <height>24</height>
+        <y>13</y>
+        <width>81</width>
+        <height>31</height>
        </rect>
       </property>
       <property name="text">
@@ -93,10 +93,10 @@
      <widget class="QLineEdit" name="searchEdit">
       <property name="geometry">
        <rect>
-        <x>880</x>
-        <y>20</y>
-        <width>171</width>
-        <height>21</height>
+        <x>800</x>
+        <y>10</y>
+        <width>251</width>
+        <height>31</height>
        </rect>
       </property>
       <property name="placeholderText">
@@ -129,26 +129,26 @@
        <string>可选讲台：</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="chooseClass">
+     <widget class="QPushButton" name="chooseClassBtn">
       <property name="geometry">
        <rect>
-        <x>460</x>
-        <y>660</y>
-        <width>75</width>
-        <height>24</height>
+        <x>440</x>
+        <y>653</y>
+        <width>91</width>
+        <height>31</height>
        </rect>
       </property>
       <property name="text">
        <string>选择讲台</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="addAuto">
+     <widget class="QPushButton" name="addAutoBtn">
       <property name="geometry">
        <rect>
-        <x>560</x>
-        <y>660</y>
-        <width>75</width>
-        <height>24</height>
+        <x>580</x>
+        <y>653</y>
+        <width>91</width>
+        <height>31</height>
        </rect>
       </property>
       <property name="text">
@@ -178,7 +178,7 @@
        <string>选课轮次：</string>
       </property>
      </widget>
-     <widget class="QTableView" name="courseTable">
+     <widget class="QTableView" name="courseTableView">
       <property name="geometry">
        <rect>
         <x>30</x>
@@ -188,16 +188,16 @@
        </rect>
       </property>
       <property name="editTriggers">
-       <set>QAbstractItemView::NoEditTriggers</set>
+       <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
       </property>
       <property name="alternatingRowColors">
        <bool>true</bool>
       </property>
       <property name="selectionMode">
-       <enum>QAbstractItemView::SingleSelection</enum>
+       <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
       </property>
       <property name="selectionBehavior">
-       <enum>QAbstractItemView::SelectRows</enum>
+       <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
       </property>
       <property name="sortingEnabled">
        <bool>true</bool>
@@ -221,26 +221,26 @@
        <number>20</number>
       </attribute>
      </widget>
-     <widget class="QTableView" name="classTable">
+     <widget class="QTableView" name="classTableView">
       <property name="geometry">
        <rect>
         <x>30</x>
         <y>460</y>
         <width>1021</width>
-        <height>191</height>
+        <height>181</height>
        </rect>
       </property>
       <property name="editTriggers">
-       <set>QAbstractItemView::NoEditTriggers</set>
+       <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
       </property>
       <property name="alternatingRowColors">
        <bool>true</bool>
       </property>
       <property name="selectionMode">
-       <enum>QAbstractItemView::SingleSelection</enum>
+       <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
       </property>
       <property name="selectionBehavior">
-       <enum>QAbstractItemView::SelectRows</enum>
+       <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
       </property>
       <property name="wordWrap">
        <bool>false</bool>
@@ -279,88 +279,88 @@
        <string>循环抢课课程列表：</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="delAutoCourse">
+     <widget class="QPushButton" name="delAutoBtn">
       <property name="geometry">
        <rect>
-        <x>220</x>
-        <y>460</y>
-        <width>111</width>
-        <height>24</height>
+        <x>930</x>
+        <y>130</y>
+        <width>121</width>
+        <height>41</height>
        </rect>
       </property>
       <property name="text">
        <string>删除选中的课程</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="autoCourseSwitch">
+     <widget class="QPushButton" name="switchAutoBtn">
       <property name="geometry">
        <rect>
-        <x>350</x>
-        <y>460</y>
-        <width>111</width>
-        <height>24</height>
+        <x>930</x>
+        <y>217</y>
+        <width>121</width>
+        <height>41</height>
        </rect>
       </property>
       <property name="text">
        <string>开始循环抢课</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="saveCourseList">
+     <widget class="QPushButton" name="saveAutoBtn">
       <property name="geometry">
        <rect>
-        <x>480</x>
-        <y>460</y>
-        <width>111</width>
-        <height>24</height>
+        <x>930</x>
+        <y>307</y>
+        <width>121</width>
+        <height>41</height>
        </rect>
       </property>
       <property name="text">
        <string>保存课程列表</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="clearCourseList">
+     <widget class="QPushButton" name="clearAutoBtn">
       <property name="geometry">
        <rect>
-        <x>610</x>
-        <y>460</y>
-        <width>111</width>
-        <height>24</height>
+        <x>930</x>
+        <y>397</y>
+        <width>121</width>
+        <height>41</height>
        </rect>
       </property>
       <property name="text">
        <string>清空课程列表</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="loadCourseList">
+     <widget class="QPushButton" name="loadAutoBtn">
       <property name="geometry">
        <rect>
-        <x>740</x>
-        <y>460</y>
-        <width>111</width>
-        <height>24</height>
+        <x>930</x>
+        <y>487</y>
+        <width>121</width>
+        <height>41</height>
        </rect>
       </property>
       <property name="text">
        <string>读取课程列表</string>
       </property>
      </widget>
-     <widget class="QTableView" name="autoCourseTable">
+     <widget class="QTableView" name="autoCourseTableView">
       <property name="geometry">
        <rect>
         <x>30</x>
         <y>50</y>
-        <width>1021</width>
-        <height>391</height>
+        <width>871</width>
+        <height>611</height>
        </rect>
       </property>
       <property name="editTriggers">
-       <set>QAbstractItemView::NoEditTriggers</set>
+       <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
       </property>
       <property name="alternatingRowColors">
        <bool>true</bool>
       </property>
       <property name="selectionBehavior">
-       <enum>QAbstractItemView::SelectRows</enum>
+       <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
       </property>
       <property name="wordWrap">
        <bool>false</bool>
@@ -409,7 +409,7 @@
      <bool>true</bool>
     </property>
     <property name="textInteractionFlags">
-     <set>Qt::LinksAccessibleByKeyboard|Qt::LinksAccessibleByMouse|Qt::TextBrowserInteraction|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+     <set>Qt::TextInteractionFlag::LinksAccessibleByKeyboard|Qt::TextInteractionFlag::LinksAccessibleByMouse|Qt::TextInteractionFlag::TextBrowserInteraction|Qt::TextInteractionFlag::TextSelectableByKeyboard|Qt::TextInteractionFlag::TextSelectableByMouse</set>
     </property>
    </widget>
   </widget>
@@ -419,7 +419,7 @@
      <x>0</x>
      <y>0</y>
      <width>1080</width>
-     <height>23</height>
+     <height>33</height>
     </rect>
    </property>
    <property name="font">
@@ -469,7 +469,7 @@
  <tabstops>
   <tabstop>tabWidget</tabstop>
   <tabstop>typeComboBox</tabstop>
-  <tabstop>refresh</tabstop>
+  <tabstop>refreshBtn</tabstop>
   <tabstop>cmdOutput</tabstop>
  </tabstops>
  <resources/>

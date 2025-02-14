@@ -1,5 +1,12 @@
 class Class:
-	def __init__(self, courseType: str, opener: str, epochCode: str, courseCode: str, currentClassIndex: str):
+	def __init__(
+			self,
+			courseType: str,
+			opener: str,
+			epochCode: str,
+			courseCode: str,
+			currentClassIndex: str
+	):
 		self.courseType = courseType
 		"""课程类型"""
 		self.opener = opener
@@ -12,7 +19,14 @@ class Class:
 
 
 class ExtensionClass(Class):
-	def __init__(self, courseType: str, opener: str, epochCode: str, courseCode: str, classIndexes: str,
-	             currentClassIndex: str):
+	def __init__(
+			self,
+			courseType: str,
+			opener: str,
+			epochCode: str,
+			courseCode: str,
+			classIndexes: str,
+			currentClassIndex: str
+	):
 		super().__init__(courseType, opener, epochCode, courseCode, currentClassIndex)
 		self.classIndexes = classIndexes

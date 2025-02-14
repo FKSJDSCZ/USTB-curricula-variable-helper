@@ -86,8 +86,6 @@ class NetworkAccessManager(QNetworkAccessManager):
 				newReply.finished.connect(lambda: self._handleRedirect(newReply, callback, allow_redirects, redirect_count + 1, *other))
 				logging.debug(f"Redirect to {redirectUrl.toString()}")
 				return
-			else:
-				logging.debug("Redirect finished")
 
 		if callback:
 			reply.finished.disconnect()
