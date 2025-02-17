@@ -16,7 +16,6 @@ rootDomain = "https://jwgl.ustb.edu.cn"
 
 
 class MainWindowService(QObject):
-	epochTimeUpdated_ = Signal()
 	typeNameUpdated_ = Signal()
 	chooseClassUpdated_ = Signal(bool, str)
 
@@ -36,6 +35,7 @@ class MainWindowService(QObject):
 	# 	if save:
 	# 		self.model_.autoReplyList_.append(reply)
 
+	# course query service
 	def getEpochList(self) -> None:
 		"""Step 0: get epoch selection list"""
 		self.manager_.get(
@@ -47,11 +47,16 @@ class MainWindowService(QObject):
 		"""Step 1: parse epoch code & set epoch selection list"""
 		epochHtml = etree.HTML(reply.readAll().data().decode(), etree.HTMLParser())
 		tableRows = epochHtml.xpath("//tr")[1:]
+
+		self.model_.epochTreeModel_.clear()
+		self.model_.epochTreeModel_.setColumnCount(2)
+		self.model_.epochTreeModel_.setHorizontalHeaderLabels(["学年学期", "选课轮次名称"])
+		root = self.model_.epochTreeModel_.invisibleRootItem()
+
 		for row in tableRows:
 			unitList = row.xpath(".//td")
-			self.model_.epochTimeList_.append(unitList[1].text)
+			root.appendRow([QStandardItem(unitList[1].text), QStandardItem(unitList[2].text)])
 			self.model_.epochCodeList_.append(unitList[3].xpath("./a/@onclick")[0][6:-3])
-		self.epochTimeUpdated_.emit()
 		reply.deleteLater()
 
 	def getTypeList(self) -> None:
@@ -61,7 +66,7 @@ class MainWindowService(QObject):
 			self._setTypeList,
 			{
 				"glyxk": "1",
-				"jx0502zbid": self.model_.epochCodeList_[self.model_.currentEpochIndex_],
+				"jx0502zbid": self.model_.epochCodeList_[self.model_.currentEpochIndex_.row()],
 				"isgld": "null"
 			},
 			{"": ""},
@@ -71,9 +76,12 @@ class MainWindowService(QObject):
 	def _setTypeList(self, reply: QNetworkReply) -> None:
 		"""Step 3: parse type name & url of course list & set type name"""
 		typeHtml = etree.HTML(reply.readAll().data().decode(), etree.HTMLParser())
-		self.model_.typeNameList_ = typeHtml.xpath("//li/a/text()")
+		typeNameList = typeHtml.xpath("//li/a/text()")
 		self.model_.typeUrlList_ = typeHtml.xpath("//li/a/@href")
 
+		epoch = self.model_.epochTreeModel_.itemFromIndex(self.model_.currentEpochIndex_)
+		for typeName in typeNameList:
+			epoch.appendRow([QStandardItem(typeName), QStandardItem(str())])
 		self.typeNameUpdated_.emit()
 		reply.deleteLater()
 
@@ -82,13 +90,13 @@ class MainWindowService(QObject):
 		Step 4: parse "type" and "opener" params & get course list in selected course type.
 		Type "课表日志查询" has no "type" and "opener" params
 		"""
-		urlToParse = self.model_.typeUrlList_[self.model_.currentTypeIndex_]
+		urlToParse = self.model_.typeUrlList_[self.model_.currentTypeIndex_.row()]
 		typeParams = parse_qs(urlparse(urlToParse).query)
 		self.model_.type_ = typeParams.get("type", [str()])[0]
 		self.model_.opener_ = typeParams.get("opener", [str()])[0]
 
 		self.manager_.get(
-			f"{rootDomain}{self.model_.typeUrlList_[self.model_.currentTypeIndex_]}",
+			f"{rootDomain}{self.model_.typeUrlList_[self.model_.currentTypeIndex_.row()]}",
 			self._setCourseList
 		)
 
@@ -143,7 +151,7 @@ class MainWindowService(QObject):
 				"xsid": "",
 				"type": self.model_.type_,
 				"opener": self.model_.opener_,
-				"dqjx0502zbid": self.model_.epochCodeList_[self.model_.currentEpochIndex_],
+				"dqjx0502zbid": self.model_.epochCodeList_[self.model_.currentEpochIndex_.row()],
 				"kcfalx": "zx",
 				"jx02id": self.model_.courseCode_,
 				"zxfxct": "0",
@@ -165,7 +173,7 @@ class MainWindowService(QObject):
 				"xsid": "",
 				"type": self.model_.type_,
 				"opener": self.model_.opener_,
-				"dqjx0502zbid": self.model_.epochCodeList_[self.model_.currentEpochIndex_],
+				"dqjx0502zbid": self.model_.epochCodeList_[self.model_.currentEpochIndex_.row()],
 				"kcfalx": "zx",
 				"jx02id": self.model_.courseCode_,
 				"cxtzdid": self.model_.classIndexes_
@@ -185,7 +193,7 @@ class MainWindowService(QObject):
 				"xsid": "",
 				"type": self.model_.type_,
 				"opener": self.model_.opener_,
-				"dqjx0502zbid": self.model_.epochCodeList_[self.model_.currentEpochIndex_],
+				"dqjx0502zbid": self.model_.epochCodeList_[self.model_.currentEpochIndex_.row()],
 				"kcfalx": "zx",
 				"jx02id": self.model_.courseCode_,
 				"sfzybxk": "",
@@ -204,7 +212,7 @@ class MainWindowService(QObject):
 				"xsid": "",
 				"type": self.model_.type_,
 				"opener": self.model_.opener_,
-				"dqjx0502zbid": self.model_.epochCodeList_[self.model_.currentEpochIndex_],
+				"dqjx0502zbid": self.model_.epochCodeList_[self.model_.currentEpochIndex_.row()],
 				"kcfalx": "zx",
 				"jx02id": self.model_.courseCode_
 			}
@@ -245,9 +253,10 @@ class MainWindowService(QObject):
 		                                                            self.model_.classTableModel_.columnCount() - 3).text()
 
 	def chooseClass(self, times: int, **kwargs) -> None:
+		"""Step 8: choose selected class"""
 		params = {
 			"jx0404id": self.model_.classIndex_,
-			"dqjx0502zbid": self.model_.epochCodeList_[self.model_.currentEpochIndex_],
+			"dqjx0502zbid": self.model_.epochCodeList_[self.model_.currentEpochIndex_.row()],
 			"yjx02id": self.model_.courseCode_,
 			"xdlx": "1",
 			"jx02id": self.model_.courseCode_,
@@ -269,6 +278,7 @@ class MainWindowService(QObject):
 		)
 
 	def _handleChooseClassReply(self, reply: QNetworkReply, times: int) -> None:
+		"""Step 9: execute two-step confirmation or finish the whole process"""
 		resData = json.loads(reply.readAll().data().decode())
 		if times == 0:
 			if resData["success"]:
@@ -293,60 +303,73 @@ class MainWindowService(QObject):
 	def updateChooseClassRes(self, resState: bool, resMessage: str) -> None:
 		print(resState, resMessage)
 
-	# def addAutoCourse(self) -> None:
-	# 	if not self.model_.autoClassTableModel_.columnCount():
-	# 		classTableCols = self.model_.classTableModel_.columnCount()
-	# 		self.model_.autoClassTableModel_.setColumnCount(classTableCols)
-	# 		for col in range(classTableCols):
-	# 			headerItem = self.model_.classTableModel_.horizontalHeaderItem(col)
-	# 			self.model_.autoClassTableModel_.setHorizontalHeaderItem(col, QStandardItem(headerItem))
-	# 	selectedClass = self.model_.selectedClass_.row()
-	# 	newRow = self.model_.autoClassTableModel_.rowCount()
-	# 	self.model_.autoClassTableModel_.setRowCount(newRow + 1)
-	# 	for col in range(self.model_.classTableModel_.columnCount()):
-	# 		item = self.model_.classTableModel_.item(selectedClass, col)
-	# 		self.model_.autoClassTableModel_.setItem(newRow, col, QStandardItem(item))
-	#
-	# 	self.model_.autoClassList_.append(
-	# 		ExtensionClass(
-	# 			self.model_.type_,
-	# 			self.model_.opener_,
-	# 			self.model_.epochCodeList_[self.model_.currentEpochIndex_],
-	# 			self.model_.courseCode_,
-	# 			self.model_.classIndexes_,
-	# 			self.model_.classIndex_
-	# 		)
-	# 	)
-	#
-	# def deleteAutoCourse(self) -> None:
-	# 	for row in sorted(self.model_.selectedAutoCourse_, key=lambda x: x.row(), reverse=True):
-	# 		self.model_.autoClassTableModel_.removeRow(row.row())
-	# 		self.model_.autoClassList_.pop(row.row())
-	#
-	# def timerSwitch(self) -> None:
-	# 	if self.timer_.isActive():
-	# 		self.timer_.stop()
-	# 	else:
-	# 		self.timer_.start(self.model_.timerInterval_)
-	#
-	# def autoChooseClass(self) -> None:
-	# 	if self.model_.autoClassList_:
-	# 		self.chooseClass(self.model_.autoClassList_[self.model_.autoClassIndex_])
-	# 		self.model_.autoClassIndex_ = (self.model_.autoClassIndex_ + 1) % len(self.model_.autoClassList_)
-	# 	else:
-	# 		print("选课列表为空")
-	#
-	# def saveAutoCourse(self) -> None:
-	# 	saveState, saveMsg = self.model_.saveAutoCourse()
-	# 	print(saveState, saveMsg)
-	#
-	# def clearAutoCourse(self) -> None:
-	# 	self.model_.autoClassTableModel_.clear()
-	# 	self.model_.autoClassList_.clear()
-	#
-	# def loadAutoCourse(self) -> None:
-	# 	loadState, loadMsg = self.model_.loadAutoCourse()
-	# 	print(loadState, loadMsg)
+	# automatic course selection service
+	def addAutoClass(self) -> None:
+		"""Copy selected class to automatic class table and list"""
+		if not self.model_.autoClassTableModel_.columnCount():
+			classTableCols = self.model_.classTableModel_.columnCount()
+			self.model_.autoClassTableModel_.setColumnCount(classTableCols)
+			for col in range(classTableCols):
+				headerItem = self.model_.classTableModel_.horizontalHeaderItem(col)
+				self.model_.autoClassTableModel_.setHorizontalHeaderItem(col, QStandardItem(headerItem))
+		selectedClass = self.model_.selectedClass_.row()
+		newRow = self.model_.autoClassTableModel_.rowCount()
+		self.model_.autoClassTableModel_.setRowCount(newRow + 1)
+		for col in range(self.model_.classTableModel_.columnCount()):
+			item = self.model_.classTableModel_.item(selectedClass, col)
+			self.model_.autoClassTableModel_.setItem(newRow, col, QStandardItem(item))
+
+		self.model_.autoClassList_.append(
+			ExtensionClass(
+				self.model_.type_,
+				self.model_.opener_,
+				self.model_.epochCodeList_[self.model_.currentEpochIndex_.row()],
+				self.model_.courseCode_,
+				self.model_.classIndexes_,
+				self.model_.classIndex_
+			)
+		)
+
+	def deleteAutoClass(self) -> None:
+		for row in sorted(self.model_.selectedAutoClass, key=lambda x: x.row(), reverse=True):
+			self.model_.autoClassTableModel_.removeRow(row.row())
+			self.model_.autoClassList_.pop(row.row())
+
+	def timerSwitch(self) -> None:
+		if self.timer_.isActive():
+			self.timer_.stop()
+		else:
+			self.timer_.start(self.model_.timerInterval_)
+
+	def autoChooseClass(self) -> None:
+		if self.model_.autoClassList_:
+			class_ = self.model_.autoClassList_[self.model_.autoClassIndex_]
+			self.chooseClass(
+				0,
+				**{
+					"jx0404id": class_.currentClassIndex,
+					"dqjx0502zbid": class_.epochCode,
+					"yjx02id": class_.courseCode,
+					"jx02id": class_.courseCode,
+					"type": class_.courseType,
+					"opener": class_.opener,
+				}
+			)
+			self.model_.autoClassIndex_ = (self.model_.autoClassIndex_ + 1) % len(self.model_.autoClassList_)
+		else:
+			print("选课列表为空")
+
+	def saveAutoClass(self) -> None:
+		saveState, saveMsg = self.model_.saveAutoClass()
+		print(saveState, saveMsg)
+
+	def clearAutoClass(self) -> None:
+		self.model_.autoClassTableModel_.clear()
+		self.model_.autoClassList_.clear()
+
+	def loadAutoClass(self) -> None:
+		loadState, loadMsg = self.model_.loadAutoClass()
+		print(loadState, loadMsg)
 
 	def quitApp(self) -> None:
 		"""Step 0: logout"""

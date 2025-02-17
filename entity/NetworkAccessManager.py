@@ -32,7 +32,9 @@ class NetworkAccessManager(QNetworkAccessManager):
 			allow_redirects: bool = True,
 			*other
 	) -> QNetworkReply:
+		logging.debug(f"GET: {url}")
 		reply = super().get(self.prepareRequest(url, params))
+		# TODO: There is a bug here. "reply" can be QStandardItem object occasionally.
 		reply.finished.connect(lambda: self._handleRedirect(reply, callback, allow_redirects, 0, *other))
 		return reply
 
@@ -46,6 +48,7 @@ class NetworkAccessManager(QNetworkAccessManager):
 			allow_redirects: bool = True,
 			*other
 	) -> QNetworkReply:
+		logging.debug(f"POST: {url}")
 		req = self.prepareRequest(url, params)
 		data = QByteArray()
 		if content_type == "application/json":
