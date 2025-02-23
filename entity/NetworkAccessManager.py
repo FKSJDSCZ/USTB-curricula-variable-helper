@@ -34,7 +34,10 @@ class NetworkAccessManager(QNetworkAccessManager):
 	) -> QNetworkReply:
 		logging.debug(f"GET: {url}")
 		reply = super().get(self.prepareRequest(url, params))
-		# TODO: There is a bug here. "reply" can be QStandardItem object occasionally.
+		# There is a bug. "reply" can be QStandardItem object occasionally.
+		if not isinstance(reply, QNetworkReply):
+			logging.critical(f"{type(reply)}, {reply.parent()}")
+			return
 		reply.finished.connect(lambda: self._handleRedirect(reply, callback, allow_redirects, 0, *other))
 		return reply
 

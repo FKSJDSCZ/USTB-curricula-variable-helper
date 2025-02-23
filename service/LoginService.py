@@ -1,4 +1,5 @@
 import json
+import re
 
 from lxml import etree
 from urllib.parse import urlparse, parse_qs
@@ -155,17 +156,7 @@ class LoginService(QObject):
 		"""step 4: check Qr code state & authenticate"""
 		if parse_qs(urlparse(reply.request().url().toString()).query)["sid"][0] == self.sessionId_:
 			resData = json.loads(reply.readAll().data().decode())
-			if resData["state"] == 101:
-				self.loginSignal.emit(False, str())
-				self._sendCheckStateRequest()
-			elif resData["state"] == 102:
-				self.loginSignal.emit(False, "已扫码，请确认")
-				self._sendCheckStateRequest()
-			elif resData["state"] == 103:
-				self.loginSignal.emit(False, "session id已失效，请刷新")
-			elif resData["state"] == 104:
-				self.loginSignal.emit(False, "二维码已失效，请刷新")
-			elif resData["state"] == 200:
+			if resData["code"] == 1:
 				self.manager_.get(
 					f"{ssoAuthDomain}/idp/authCenter/authenticateByLck",
 					self._sendLoginRequest,
@@ -178,6 +169,23 @@ class LoginService(QObject):
 					}
 				)
 				self.loginSignal.emit(False, "登录中...")
+			elif resData["code"] == 2:
+				emitMsg = ("企业" if resData["data"] == "WxWork" else str()) + "微信已扫码，请确认"
+				self.loginSignal.emit(False, emitMsg)
+				self._sendCheckStateRequest()
+			elif resData["code"] == 3 or resData["code"] > 200:
+				self.loginSignal.emit(False, "二维码已失效，请刷新")
+			elif resData["code"] == 4:
+				self.loginSignal.emit(False, str())
+				self._sendCheckStateRequest()
+			elif resData["code"] == 0:
+				self.loginSignal.emit(False, "请求状态异常")
+			elif resData["code"] == 101:
+				self.loginSignal.emit(False, "请求的方法不被允许")
+			elif resData["code"] == 102:
+				self.loginSignal.emit(False, "请求不合法")
+			else:
+				self.loginSignal.emit(False, resData["message"])
 		self.lastQrStateQuery_ = None
 		reply.deleteLater()
 
@@ -200,6 +208,13 @@ class LoginService(QObject):
 
 	def _login(self, reply: QNetworkReply) -> None:
 		"""step 6: ready to switch view"""
+		homepageHtml: etree._Element = etree.HTML(reply.readAll().data().decode(), etree.HTMLParser())
+		scripts = homepageHtml.xpath("//script[@type='text/javascript']/text()")
+		for script in scripts:
+			match = re.findall(r"var\s+userid\s*=\s*['\"](.*?)['\"]", script)
+			if match:
+				self.userName_ = match[0]
+				break
 		self.loginSignal.emit(True, str())
 		reply.deleteLater()
 
